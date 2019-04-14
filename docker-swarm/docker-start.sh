@@ -70,3 +70,14 @@ docker container exec -it manager docker stack deploy -c /stack/visualizer.yml v
 docker container exec -it manager docker stack rm echo
 
 ## ServiceをSwarmクラスタ外から利用する
+# 再度ch03-webapi.ymlをecho Stackとしてデプロイ
+docker container exec -it manager docker stack deploy -c /stack/ch03-webapi.yml echo
+
+# ch03-ingress.ymlをingress Stackとしてデプロイ
+docker container exec -it manager docker stack deploy -c /stack/ch03-ingress.yml ingress
+
+# Serviceの一覧を見る
+docker container exec -it manager docker service ls
+
+# curlできるか確認
+curl http://localhost:8000/
