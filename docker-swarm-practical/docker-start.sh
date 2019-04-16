@@ -89,3 +89,57 @@ docker container exec -it manager \
 docker network create --driver=overlay --attachable todoapp
 
 # MySQL Serviceの構築 p122
+ghq get github.com/gihyodocker/tododb
+C-g tododb
+# dockerイメージをビルド
+docker image build -t ch04/tododb:latest .
+# tagをつける
+docker image tag ch04/tododb:latest localhost:5000/ch04/tododb:latest
+# registryにpush
+docker image push localhost:5000/ch04/tododb:latest
+
+# Swarmでtodo-mysqlをデプロイ
+docker container exec -it manager docker stack deploy -c /stack/todo-mysql.yml todo_mysql
+# 確認
+docker container exec -it manager docker service ls
+
+# 4.2.7 MySQLコンテナを確認し、初期データ投入
+# Masterコンテナがどのノードにあるか見る
+docker container exec -it manager docker service ps todo_mysql_master --no-trunc \
+--filter "desired-state=running"
+# NODE(692149889de1)とID(dn4m5nbahpufksp0rduujwdxd)をコピーし、これを実行
+docker container exec -it 692149889de1 \
+docker container exec -it todo_mysql_master.1.dn4m5nbahpufksp0rduujwdxd bash
+# 上記のコマンドを出すスクリプト
+docker container exec -it manager \
+docker service ps todo_mysql_master \
+--no-trunc \
+--filter "desired-state=running" \
+--format "docker container exec -it {{.Node}} docker container exec -it {{.Name}}.{{.ID}} bash"
+
+# masterコンテナでinit-data.shを実行し,初期データ投入
+docker container exec -it 692149889de1 \
+docker container exec -it todo_mysql_master.1.dn4m5nbahpufksp0rduujwdxd \
+init-data.sh
+
+# DB確認
+docker container exec -it 692149889de1 \
+docker container exec -it todo_mysql_master.1.dn4m5nbahpufksp0rduujwdxd \
+mysql -u gihyo -pgihyo tododb
+mysql> SELECT * FROM todo LIMIT 1\G
+
+# Slaveにもデータがあるか確認
+# Slaveコンテナ入るためのコマンド出すスクリプト
+docker container exec -it manager \
+docker service ps todo_mysql_slave \
+--no-trunc \
+--filter "desired-state=running" \
+--format "docker container exec -it {{.Node}} docker container exec -it {{.Name}}.{{.ID}} bash"
+# コンテナ入ってSQL投げる
+docker container exec -it 6aa0ee42bbec \
+docker container exec -it todo_mysql_slave.1.xsgo29kl2xxi57508nd4w1sa2 \
+mysql -u gihyo -pgihyo tododb
+mysql> SELECT * FROM todo LIMIT 1\G
+# 意図した通り、master slaveに同じデータ入ってるか見る
+
+## 4.3 API Serviceの構築
