@@ -186,3 +186,8 @@ docker image push localhost:5000/ch04/nginx-nuxt:latest
 ## 4.5.4 Nginxを通してアクセスできるようにする
 touch stack/todo-frontend.yml
 #p158見て書く
+# todo_frontend Stackとしてデプロイ
+docker container exec -it manager \
+docker stack deploy -c /stack/todo-frontend.yml todo_frontend
+
+## 4.5.5 Ingressで公開する
