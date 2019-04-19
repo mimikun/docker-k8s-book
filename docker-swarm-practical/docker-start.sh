@@ -191,3 +191,14 @@ docker container exec -it manager \
 docker stack deploy -c /stack/todo-frontend.yml todo_frontend
 
 ## 4.5.5 Ingressで公開する
+touch stack/todo-ingress.yml
+docker container exec -it manager \
+docker stack deploy -c /stack/todo-ingress.yml todo_ingress
+#僕の環境では、ingressがポートを既に使ってたらしくエラー出た
+#failed to create service todo_ingress_haproxy: Error response from daemon:
+#rpc error: code = InvalidArgument desc = port '80' is already
+#in use by service 'ingress_haproxy' (t028bcthebj6uyf4wgkj88ej3) as an ingress port
+#ので、stack rm ingressして解決
+#docker container exec -it manager docker stack rm ingress
+
+# TODO: nuxt server errorを解消, 多分4.5 Webの構築が原因
