@@ -143,3 +143,46 @@ mysql> SELECT * FROM todo LIMIT 1\G
 # 意図した通り、master slaveに同じデータ入ってるか見る
 
 ## 4.3 API Serviceの構築
+ghq get -p gihyodocker/todoapi
+#C-g -> gihyodocker/todoapi
+docker image build -t ch04/todoapi:latest .
+docker image tag ch04/todoapi:latest localhost:5000/ch04/todoapi:latest
+docker image push localhost:5000/ch04/todoapi:latest
+# Swarm上でtodoapiサービスを実行
+touch stack/todo-app.yml
+docker container exec -it manager docker stack deploy -c /stack/todo-app.yml todo_app
+## 4.4 Nginxの構築
+ghq get -p gihyodocker/todonginx
+C-g gihyongi
+## とりあえずはAPIの前におくnginxをつくる
+docker image build -t ch04/nginx:latest .
+docker image tag ch04/nginx:latest localhost:5000/ch04/nginx:latest
+docker image push localhost:5000/ch04/nginx:latest
+# todo-app.ymlを更新し、nginxを通してアクセスできるようにする
+# todo_appのStackを更新
+docker container exec -it manager docker stack deploy -c /stack/todo-app.yml todo_app
+
+# 4.5 Webの構築
+ghq get -p gihyodocker/todoweb
+C-g gihyow
+docker image build -t ch04/todoweb:latest .
+docker image tag ch04/todoweb:latest localhost:5000/ch04/todoweb:latest
+docker image push localhost:5000/ch04/todoweb:latest
+
+## 4.5.3 静的ファイルの扱いを工夫する
+# 静的ファイルなassetsファイルはWeb通さずNginxから直接レスポンスするようにする
+C-g gihyongi
+cp etc/nginx/conf.d/public.conf.tmpl etc/nginx/conf.d/nuxt.conf.tmpl
+#p156を見て追記する
+cp Dockerfile Dockerfile-nuxt
+#p156, 157を見て追記する
+# イメージをビルドする
+docker image build -f Dockerfile-nuxt -t ch04/nginx-nuxt:latest .
+docker image tag ch04/nginx-nuxt:latest localhost:5000/ch04/nginx-nuxt:latest
+docker image push localhost:5000/ch04/nginx-nuxt:latest
+
+# コンテナ間でのボリューム共有
+# assets用のdocker volumeを作成しnginxとtodowebで共有する
+## 4.5.4 Nginxを通してアクセスできるようにする
+touch stack/todo-frontend.yml
+#p158見て書く
