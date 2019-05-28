@@ -42,4 +42,32 @@ kubectl get namespace
 #同一Pod内のコンテナはすべて同一のNodeに配置される
 
 ### 5.6.1 Podを作成してデプロイする
-simple-pod.ymlをつかう ここまで
+#simple-pod.ymlをつかう
+#kind はk8sのリソースを指定する属性 ここではPodを指定
+#kindの値次第でspec配下のスキーマが変わる
+
+#applyを使ってローカルk8sクラスタに反映する
+kubectl apply -f simple-pod.yml
+
+### 5.6.2 Podを操作する
+#Podの状態を一覧取得
+kubectl get pod
+
+#kubectl execでコンテナ内に入る
+kubectl exec -it simple-echo sh -c nginx
+#Podの中に複数コンテナがある時は-cで指定
+
+#kubectl logs でPodコンテナ内の標準出力を取得
+kubectl logs -f simple-echo -c echo
+
+#Podを削除
+kubectl delete pod simple-echo
+
+#マニフェストファイル(.yml)ベースで削除も可
+kubectl delete -f simple-echo.yml
+
+## 5.7 ReplicaSet
+#同じ仕様のPodを複数生成、管理するためのリソース
+#ReplicaSetはWebアプリ向け
+
+## 5.8 Deployment
