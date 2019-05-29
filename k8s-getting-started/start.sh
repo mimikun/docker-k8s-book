@@ -71,3 +71,37 @@ kubectl delete -f simple-echo.yml
 #ReplicaSetはWebアプリ向け
 
 ## 5.8 Deployment
+#ReplicaSetより上位のリソース
+#アプリケーションデプロイの基本単位となるリソース
+#ReplicaSetを管理・操作するために提供されているリソース
+#Deploymentは、ReplicaSetの世代管理(リビジョン付け)を可能にする。
+#kubectlのコマンドを記録するために、--recordオプションをつけて実行。
+kubectl apply -f simple-deployment.yml --record
+# こんな感じ
+# NAME                        READY     STATUS              RESTARTS   AGE
+# pod/echo-8556ddbfb9-pw7zq   0/2       ContainerCreating   0          29s
+# pod/echo-mj2r8              2/2       Running             0          25m
+# pod/echo-q89vh              2/2       Running             0          25m
+# pod/echo-wlbpb              2/2       Running             0          25m
+
+# NAME                                    DESIRED   CURRENT   READY     AGE
+# replicaset.extensions/echo              3         3         3         25m
+# replicaset.extensions/echo-8556ddbfb9   1         1         0         29s
+
+# NAME                         DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+# deployment.extensions/echo   3         4         1            3           32s
+
+#Deploymentのリビジョンはこれで確認。
+kubectl rollout history deployment echo
+# こんな感じ
+# deployments "echo"
+# REVISION  CHANGE-CAUSE
+# 0         <none>
+# 1         kubectl apply --filename=simple-deployment.yml --record=true
+
+### ReplicaSetライフサイクル
+#k8sではDeploymentを一つの単位としてアプリケーションをデプロイしていく
+#実運用ではReplicaSetはほとんど使わない。Deploymentのマニフェストファイルを扱う運用にすることがほとんど
+#Pod数のみを更新しても、新しいReplicaSetは生まれない。
+#replicasを4つに増やし以下を実行
+kubectl apply -f simple-deployment.yml --record
