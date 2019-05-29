@@ -16,7 +16,7 @@ spec:
       spec:
         containers:
         - name: nginx
-          image: gihyodocker/nginx:latest
+          image: gihyodocker/nginx:patched
           env:
           - name: BACKEND_HOST
             value: localhost:8080

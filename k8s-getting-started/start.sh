@@ -102,6 +102,64 @@ kubectl rollout history deployment echo
 ### ReplicaSetライフサイクル
 #k8sではDeploymentを一つの単位としてアプリケーションをデプロイしていく
 #実運用ではReplicaSetはほとんど使わない。Deploymentのマニフェストファイルを扱う運用にすることがほとんど
-#Pod数のみを更新しても、新しいReplicaSetは生まれない。
+#### Pod数のみを更新しても、新しいReplicaSetは生まれない。
 #replicasを4つに増やし以下を実行
 kubectl apply -f simple-deployment.yml --record
+#新しくReplicaSetが生成されていればリビジョン番号が表示されるはずだが、表示されていない
+#つまりreplicasの変更ではReplicaSetの入れ替えは発生しない
+# ➜  k8s-getting-started git:(master) ✗ kubectl rollout history deployment echo
+# deployments "echo"
+# REVISION  CHANGE-CAUSE
+# 0         <none>
+# 1         kubectl apply --filename=simple-deployment.yml --record=true
+
+#### コンテナ定義を変更
+#コンテナのイメージを変更した場合
+#このように新しいPodが生成され、古いのは消えていく
+# ➜  k8s-getting-started git:(master) ✗ kubectl get pod
+# NAME                    READY     STATUS              RESTARTS   AGE
+# echo-7d9fb9c79f-thc72   0/2       ContainerCreating   0          2s
+# echo-8556ddbfb9-ngdnz   2/2       Running             0          30m
+# echo-8556ddbfb9-pw7zq   2/2       Running             0          31m
+# echo-8556ddbfb9-tkxr9   2/2       Terminating         0          3m
+# echo-8556ddbfb9-vmbhq   2/2       Running             0          31m
+
+#この状態でリビジョンを確認すると、REVISION=2が作成されている
+# deployments "echo"
+# REVISION  CHANGE-CAUSE
+# 0         <none>
+# 1         kubectl apply --filename=simple-deployment.yml --record=true
+# 2         kubectl apply --filename=simple-deployment.yml --record=true
+
+#### 5.8.2 ロールバックを実行する
+#Deploymentのリビジョンが記録されているため、特定のリビジョンの内容を確認できる
+kubectl rollout history deployment echo --revision=1
+# deployments "echo" with revision #1
+# Pod Template:
+#   Labels:	app=echo
+# 	pod-template-hash=4112886965
+#   Annotations:	kubernetes.io/change-cause=kubectl apply --filename=simple-deployment.yml --record=true
+#   Containers:
+#    nginx:
+#     Image:	gihyodocker/nginx:latest
+#     Port:	80/TCP
+#     Host Port:	0/TCP
+#     Environment:
+#       BACKEND_HOST:	localhost:8080
+#     Mounts:	<none>
+#    echo:
+#     Image:	gihyodocker/echo:latest
+#     Port:	8080/TCP
+#     Host Port:	0/TCP
+#     Environment:	<none>
+#     Mounts:	<none>
+#   Volumes:	<none>
+
+#undoを実行すれば直前の操作のリビジョンにロールバックできる
+kubectl rollout undo deployment echo
+
+#おわり、最後に全部消して掃除
+kubectl delete -f simple-deployment.yml
+
+## 5.9 Service
+ここまで
