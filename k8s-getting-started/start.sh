@@ -162,4 +162,69 @@ kubectl rollout undo deployment echo
 kubectl delete -f simple-deployment.yml
 
 ## 5.9 Service
-ここまで
+#k8sクラスタ内において、Podの集合に対する経路やサービスディスカバリを提供するためのリソース
+#applyする
+kubectl apply -f simple-replicaset-with-label.yml
+
+#get podして、labelにspring, summerとついたpodがそれぞれ1つ, ２つあるか見る
+kubectl get pod -l app=echo -l release=spring
+# NAME                READY     STATUS    RESTARTS   AGE
+# echo-spring-sfx2c   2/2       Running   0          46s
+kubectl get pod -l app=echo -l release=summer
+# NAME                READY     STATUS    RESTARTS   AGE
+# echo-summer-5kmk5   2/2       Running   0          2m
+# echo-summer-qm245   2/2       Running   0          36s
+
+#release=summerを持つPodだけにアクセスできるようなServiceを作成する
+#Serviceをapplyする
+kubectl apply -f simple-service.yml
+
+#kubectl get service echo でServiceを確認
+# NAME      TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+# echo      ClusterIP   10.98.184.151   <none>        80/TCP    30s
+
+#実際にrelease=summerを持つコンテナだけにトラフィックが流れるか確認する
+#Serviceはk8sクラスタ内からしかアクセスできないので、デバッグ用コンテナをデプロイして、そこからいろいろする
+kubectl run -i --rm --tty debug --image=gihyodocker/fundamental:0.1.0 --restart=Never -- bash -il
+
+#いくつかのPodのログを確認し、received request がsummerのラベル付きPodにしか出てないことを確認する
+kubectl get pods
+# NAME                READY     STATUS    RESTARTS   AGE
+# echo-spring-sfx2c   2/2       Running   0          16m
+# echo-summer-5kmk5   2/2       Running   0          16m
+# echo-summer-qm245   2/2       Running   0          14m
+kubectl logs -f echo-spring-sfx2c -c echo
+# 2019/05/30 12:18:32 start server
+kubectl logs -f echo-summer-5kmk5 -c echo
+# 2019/05/30 12:18:30 start server
+# 2019/05/30 12:32:13 received request
+kubectl logs -f echo-summer-qm245 -c echo
+# 2019/05/30 12:20:06 start server
+# 2019/05/30 12:32:04 received request
+# 2019/05/30 12:32:06 received request
+# 2019/05/30 12:32:07 received request
+
+### 5.9.1 ClusterIP Service
+#デフォルトのServiceはこれ
+#k8sクラスタ上の内部IPアドレスにServiceを公開できる
+#あるPodから別のPod群へのアクセスはここ介して行うことが可能
+#外からは無理
+
+### 5.9.2 NodePort Service
+#クラスタ外からアクセスできるService
+
+kubectl apply -f simple-nodeport-service.yml
+kubectl get service echo
+# NAME      TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+# echo      NodePort   10.98.184.151   <none>        80:30378/TCP   16m
+curl http://127.0.0.1:30378
+# Hello Docker!!
+
+### 5.9.3 LoadBalancer Service
+#ローカル環境では利用できない
+#クラウド環境(GCP...CLB, AWS...ELB)で使うやつ
+
+### 5.9.4 ExternalName Service
+#selectorもport定義も持たない
+#k8sクラスタ内から外部のホストを解決するためのエイリアスを提供
+#simple-externalname-service.ymlを作成すると, gihyo.jp をgihyo で名前解決できるようになる
