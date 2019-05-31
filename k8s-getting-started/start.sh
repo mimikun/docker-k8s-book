@@ -228,3 +228,41 @@ curl http://127.0.0.1:30378
 #selectorもport定義も持たない
 #k8sクラスタ内から外部のホストを解決するためのエイリアスを提供
 #simple-externalname-service.ymlを作成すると, gihyo.jp をgihyo で名前解決できるようになる
+
+
+## 5.10 Ingress
+#k8sクラスタの外にServiceを公開するためにはNodePortで公開することが必要
+#でもこれではレイヤ4までしか無理
+#つまりHTTPのようにパスベースで転送先のServiceを切り替えるとかいうL7レベルのことは無理
+#これを解決するためのリソース
+
+#以下のコマンドでクラスタの外からのリクエストをServiceにルーティングするためのやつをデプロイ
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.16.2/deploy/mandatory.yaml
+
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.16.2/deploy/provider/cloud-generic.yaml
+
+#確認
+kubectl -n ingress-nginx get service,pod
+# NAME                           TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+# service/default-http-backend   ClusterIP      10.107.92.74    <none>        80/TCP                       42s
+# service/ingress-nginx          LoadBalancer   10.96.249.174   localhost     80:30882/TCP,443:30670/TCP   30s
+
+# NAME                                           READY     STATUS              RESTARTS   AGE
+# pod/default-http-backend-5c6d95c48-zhlvh       0/1       ContainerCreating   0          41s
+# pod/nginx-ingress-controller-685fdbc9c-xxtf7   0/1       ContainerCreating   0          41s
+
+### 5.10.1 Ingressを通じたアクセス
+kubectl apply -f simple-service.yml
+
+kubectl apply -f simple-ingress.yml
+
+#確認
+kubectl get ingress
+# NAME      HOSTS              ADDRESS     PORTS     AGE
+# echo      ch05.gihyo.local   localhost   80        14s
+
+#Ingressはレイヤ7のルーティングが可能
+curl http://localhost -H 'Host: ch05.gihyo.local'
+# Hello Docker!!
+
+#他にもいろいろできる
