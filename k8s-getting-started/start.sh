@@ -266,3 +266,15 @@ curl http://localhost -H 'Host: ch05.gihyo.local'
 # Hello Docker!!
 
 #他にもいろいろできる
+vi simple-ingress.yml
+
+#変更を反映
+kubectl apply -f simple-ingress.yml
+
+#UserAgentにMobileが含まれるリクエストを別のURLにリダイレクトしている
+#ためしにリクエスト投げてみる
+curl http://localhost \
+  -H 'Host: ch05.gihyo.local' \
+  -H 'User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X)a
+  AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1'
+
