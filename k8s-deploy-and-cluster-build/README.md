@@ -48,11 +48,12 @@ $ gcloud container clusters create gihyo --cluster-version=1.12.7-gke.10 \
     --num-nodes=3 \
     --disk-size=10
 
-
 続いてgcloudで作成したクラスタを制御できるようにするためにkubectlに認証情報をセットする
+
 $ gcloud container clusters get-credentials gihyo
-Fetching cluster endpoint and auth data.
-kubeconfig entry generated for gihyo.
+
+> Fetching cluster endpoint and auth data.
+> kubeconfig entry generated for gihyo.
 
 こう出れば成功。
 
@@ -62,6 +63,95 @@ $ kubectl get nodes
 
 ### 2. クラスタの消し方
 
-gcloud container clusters delete gihyo
+$ gcloud container clusters delete gihyo
 
 一日の勉強終わりにはこれを実行し、無駄な金の発生を抑えることにする。
+
+## 6.2 GKEにTODOアプリケーションを構築する
+
+MySQL, API, Webアプリケーションの順でデプロイしていく。
+
+## 6.3 Master Slave構成のMySQLをGKE上に構築する
+
+### 6.3.1 PersistentVolumeとPersistentVolumeClaim
+
+k8sではストレージを確保するためにPersistentVolumeとPersistentVolumeClaimというリソースが提供されている。
+これらはクラスタが構築されてるプラットフォームに対応した永続ボリュームを作成するためのリソース。
+PersistentVolumeはストレージの実体。GCPではGCEPersistentDiskがそれにあたる。
+対してPersistentVolumeClaimはストレージを論理的に抽象化したリソース。PersistentVolumeに対して必要な容量を動的に確保できる
+マニフェストファイルのイメージを以下に記す
+
+```txt
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-example
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ssd
+  resources:
+    requests:
+      storage: 4Gi
+```
+
+accessModes...Podからストレージへのマウントポリシーのこと
+ReadWriteOnceであればどこか1つのノードからのR/Wマウントのみが許可される
+storageClassNameは後述するStorageClassリソースの名前のこと
+利用するストレージの種類を定義する
+
+これはサンプルなので今回は使わない
+
+### 6.3.2 StorageClass
+
+StorageClassはPersistentVolumeが確保するストレージの種類を定義できるリソース
+
+$ touch storage-class-ssd.yml
+
+(詳しくはstorage-class-ssd.ymlを見ること)
+
+ssdという名前のSSDに対応したストレージクラスを定義している。
+
+$ kubectl apply -f storage-class-ssd.yml
+
+### 6.3.3 StatefulSet
+
+データストアのように継続的にデータを永続化するステートフルなアプリケーションの管理に向いたリソース
+pod-0, pod-1, pod-n のような形で連番の識別子が振られる
+識別子はPodが再作成されても保たれる
+
+$ touch mysql-master.yml
+
+(詳しくはmysql-masterを見ること)
+
+$ kubctl apply -f mysql-master.yml
+
+StatefulSetはステートフルなReplicaSetという位置づけ
+
+#### Slaveの設定
+
+$ touch mysql-slave.yml
+
+(詳しくはmysql-slave.ymlを見ること)
+
+$ kubectl apply -f mysql-slave.yml
+
+#### 実行内容の確認
+
+MasterのPodに`init-data.sh`で初期データを入れ、Slaveに反映されてるか確かめる
+
+$ kubectl exec -it mysql-master-0 init-data.sh
+> Error from server: error dialing backend: ssh: rejected: connect failed (Connection refused)
+
+エラーが出た。sshで繋げない。しらべる。
+
+というか、CrashLoopBackOffやErrorが大量に出てたくさん再起動してるのがよくなく見える。
+なんとかする。
+
+また、こんなエラーも…
+> rpc error: code = 2 desc = containerd: container not found
+> command terminated with exit code 126
+
+とりあえずクラスタごと消す…
+
+一旦コミット
