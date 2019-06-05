@@ -2,8 +2,7 @@
 
 # クラスタの作成
 gcloud container clusters create gihyo --cluster-version=1.12.7-gke.10 \
-    --preemptible \
-    --machine-type=f1-micro \
+    --machine-type=n1-standard-1 \
     --num-nodes=3 \
     --disk-size=10
 
