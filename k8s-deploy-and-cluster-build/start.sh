@@ -28,4 +28,17 @@ kubectl apply -f mysql-slave.yml
 
 sleep 20
 # master Podに初期データ投入
-kubectl exec -it mysql-master-0 init-data.sh
+kubectl exec -it mysql-master-0 /usr/local/bin/init-data.sh
+
+# slaveにデータが入っているか確認
+# kubectl exec -it mysql-slave-0 bash
+# root# mysql -u root -pgihyo tododb
+# mysql> SHOW TABLES;
+
+sleep 20
+# TODO APIをGKE上に構築
+kubectl apply -f todo-api.yml
+
+sleep 20
+# TODO WebをGKE上に構築
+kubectl apply -f todo-web.yml

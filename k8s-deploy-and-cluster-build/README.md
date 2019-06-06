@@ -155,3 +155,83 @@ $ kubectl exec -it mysql-master-0 init-data.sh
 とりあえずクラスタごと消す…
 
 一旦コミット
+
+2019/06/06
+
+gihyodocker/tododbが変になってそうなので、自分でビルドしたイメージを使う
+
+```sh
+ghq get -p mimikun/tododb
+C-g mimikun/tododb
+docker image build -t mimikun/tododb:latest .
+docker image push mimikun/tododb:latest
+```
+
+あとはyml内のgihyodocker/tododb をmimikun/tododbに置き換えるだけ…
+
+解決した。
+
+初期データ投入はこれで
+
+$ kubectl exec -it mysql-master-0 /usr/local/bin/init-data.sh
+
+## 6.4 TODO APIをGKE上に構築する
+
+続いてTODO APIをGKE上に構築する。
+
+$ touch todo-api.yml
+
+(詳しくはtodo-api.ymlを見ること)
+
+$ kubectl apply -f todo-api.yml
+
+nginxコンテナはgihyodocker/nginx:latest, apiコンテナはgihyodocker/todoapi:latestを使用
+ここではPodはNginxとAPIを一緒のPodにぶちこむ
+Nginxでは環境変数でプロキシ先を指定するが、apiは同一Pod内に存在するのでlocalhost:8080で解決できる
+MySQLのMasterはmysql-master, Slaveはmysql-slaveで名前解決できるようになっているので, 環境変数で接続先を指定する
+
+Podの起動を確認:
+$ kubectl get pod -l app=todoapi
+
+## 6.5 TODO WebアプリケーションをGKE上に構築する
+
+$ touch todo-web.yml
+
+(詳しくはtodo-web.yml)を見ること
+
+$ kubectl apply -f todo-web.yml
+
+nginxコンテナはgihyodocker/nginx-nuxt:latest, apiコンテナはgihyodocker/todoweb:latestを使用
+DeploymentではnginxとwebコンテナでPodを構成する
+これもPodでは同梱すべき, nginxコンテナの環境変数BACKEND_HOSTは同じPod内のwebコンテナを指す。
+ので、localhost:3000を、webコンテナの環境変数TODO_API_URLはtodoapiのService名をURLにしたもの。
+assetsファイルをNginxに配置してレスポンスするためにk8sのVolumeを利用。
+k8sのVolumeはDockerのそれと同じくデータを永続化するためのしくみ。
+`emptyDir: {}`とすることでPod単位に割り当てられる仮想Volumeを作成している。
+emptyDirには同一Pod内のそれぞれのコンテナから好きなパスでアクセスできる。
+マウントするコンテナのパスはmountPathで指定する
+
+仮想Volumeによってコンテナ間のディレクトリ共有が可能になった。
+だが、仮想Volumeはまだからっぽ。
+なので、webコンテナのassetsファイルをNginxコンテナにコピーしないといけない。
+このようなケースではLifecycleイベントを使う。
+多分ここ: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/
+Lifecycleイベントはコンテナの開始時や終了時のタイミングで任意のコマンドを実行するための仕組み。
+entrykitのprehookでも同じことができるが、Lifecycleイベントの場合はDockerfileに手を加えずにできるのでよい。
+今回はportstartを使ってwebコンテナ開始時に仮想Volumeにassetsファイルをコピーする。
+portstart.exec.commandで`cp -R /todoweb/.nuxt/dist /`を実行していて、`/dist`ディレクトリにassetsファイルがコピーされる。
+
+webコンテナの`/dist`ディレクトリは仮想Volumeによってnginxコンテナにも共有されている。
+nginxコンテナの`/var/www/_nuxt`ディレクトリにassetsが配置されることになる。
+
+これでassetsファイルをnginxからレスポンス可になる。
+このやりかたはPod内でコンテナ型ディレクトリ共有をするのに便利。
+ServiceはのちほどIngressでインターネットから公開できるようにするため、NodePortというtypeを指定している。
+
+サービスの状態を確認。
+
+$ kubectl get service todoweb
+> NAME      TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+> todoweb   NodePort   IPアドレス   <none>        80:32509/TCP   16m
+
+今日はここまで。study-finish.shを実行。
