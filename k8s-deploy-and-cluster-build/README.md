@@ -251,3 +251,6 @@ $ touch ingress.yml
 反映
 
 $ kubectl apply -f ingress.yml
+
+Ingressのステータスが `Some backend services are in UNHEALTHY state` になっていてわからない。
+調べてもいまいちわからない
