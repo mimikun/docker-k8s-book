@@ -235,3 +235,19 @@ $ kubectl get service todoweb
 > todoweb   NodePort   IPアドレス   <none>        80:32509/TCP   16m
 
 今日はここまで。study-finish.shを実行。
+
+2019/06/07
+
+## 6.6 IngressでWebアプリケーションをインターネットに公開する
+
+開始。
+$ start.sh
+
+Ingressを使ってWebアプリを公開する。
+今回はGCPをつかってるのでCloud Load Balancingがつかえる。
+
+$ touch ingress.yml
+
+反映
+
+$ kubectl apply -f ingress.yml

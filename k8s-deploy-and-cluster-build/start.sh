@@ -42,3 +42,18 @@ kubectl apply -f todo-api.yml
 sleep 20
 # TODO WebをGKE上に構築
 kubectl apply -f todo-web.yml
+
+sleep 20
+# Ingressを反映
+kubectl apply -f ingress.yml
+
+sleep 5
+# 1分ほど待たせる
+echo "please wait 70sec!"
+sleep 70
+
+kubectl get ingress
+
+sleep 180
+echo "please access to this IP address!"
+kubectl get ingress
