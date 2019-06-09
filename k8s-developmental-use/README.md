@@ -1,5 +1,8 @@
 # 7章 Kubernetesの発展的な利用
 
+使用しているリポジトリURL:
+https://github.com/mimikun/docker-k8s-book/tree/master/k8s-developmental-use
+
 ## 7.1 Kubernetesの様々なリソース
 
 k8sは常駐型サーバアプリ以外にもジョブサーバなど色々な使いみちがある。
