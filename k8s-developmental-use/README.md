@@ -45,3 +45,37 @@ get podの結果:
 > pingpong-x4rvv   0/1     Completed   0          13m
 
 今日はここまで。
+
+2019年6月10日
+
+### 7.1.2 CronJob
+
+CronJobリソースを使用すると、スケジューリングして定期的にPodを実行できる。
+名前どおりcronやsystemd-timerなどで定期実行していたジョブの実行に便利
+通常のサーバのcronはcrontabで管理するが、cronjobはマニフェストファイル(yml)で定義できる。
+スケジューリング定義のレビューをPRで実施できるなど、構成のコード管理が便利になる。
+
+$ touch simple-cronjob.yml
+
+(詳しくはsimple-cronjob.ymlを見る)
+
+最大の違いとして、spec.scheduleにcron記法でPodの起動スケジュールを定義できるようになっている。
+spec.jobTemplate以下はJobリソースで定義しているPod定義のテンプレートと同じ。
+cronjobのマニフェストファイルを適用すると、ジョブが作成され、指定したcronの条件に基づいたスケジュールでPodを作成する。
+
+反映
+$ kubectl apply -f simple-cronjob.yml
+
+確認
+$ kubectl get job -l app=pingpong
+
+ログ
+$ kubectl logs -l app=pingpong
+
+定期的にジョブを実行するようなユースケースで、従来の非コンテナ環境においては、Linuxのcrontabにスケジュールとスクリプトを配置する方法が一般的だった。
+k8sのcrontabを利用すれば、すべてをコンテナベースで解決できるようになる。
+環境管理、構築、実行のすべてをコードで統一的に管理できる。
+例のように軽量イメージのコンテナに対して実行する処理をマニフェストファイルに記述する形式もよい。
+マニフェストには処理を記述せず、実装をDockerイメージに閉じ込めて実行する形式でもよい。
+
+今日はここまで。
