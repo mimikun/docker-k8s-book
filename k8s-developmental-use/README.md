@@ -79,3 +79,74 @@ k8sのcrontabを利用すれば、すべてをコンテナベースで解決で�
 マニフェストには処理を記述せず、実装をDockerイメージに閉じ込めて実行する形式でもよい。
 
 今日はここまで。
+
+2019年6月11日
+
+### 7.1.3 Secret
+
+機密情報(証明書や鍵)をそのまま平文で書くのはやばい。
+こういうとき、k8sではsecretリソースをつかうと、機密情報の文字列をbase64エンコードした状態で扱える。
+例: NginxのBasic認証の機密情報を記述したファイルをSecretで管理してみる。
+まずopensslを使ってユーザ名とパスワードを暗号化、base64文字列に変換してみる。
+
+$ echo "mimikun:$(openssl passwd -quiet -crypt password)" | base64
+
+ユーザ名: mimikun
+パスワード: password
+とした。
+
+$ touch nginx-secret.yml
+
+.htpasswdという認証情報ファイルを生成し、その内容に先程のコマンドで作った文字列を入れる。
+
+$ kubectl apply -f nginx-secret.yml
+
+podリソースじゃないので`get pod`では確認できない。
+
+$ kubectl get secret
+
+このsecretリソースを活用したNginxをつくる。
+
+$ touch basic-auth.yml
+
+(詳しくはbasic-auth.yml見て)
+
+すでに作成済みのnginx-secretをvolumeとしてマウントし、nginxコンテナの/etc/nginx/secretディレクトリにマウントする。
+これにより、nginx-secretで.htpasswdとして設定した文字列は、復号され、nginxコンテナ内の/etc/nginx/secret/.htpasswdに入れられる。
+
+$ kubectl apply -f basic-auth.yml
+
+curlでリクエスト投げてみる。
+
+$ curl http://127.0.0.1:30060
+
+```sh
+<html>
+<head><title>401 Authorization Required</title></head>
+<body bgcolor="white">
+<center><h1>401 Authorization Required</h1></center>
+<hr><center>nginx/1.13.12</center>
+</body>
+</html>
+```
+
+認証が必要と言われる。
+
+$ curl -i --user mimikun:password http://127.0.0.1:30060
+
+```sh
+HTTP/1.1 200 OK
+Server: nginx/1.13.12
+Date: Tue, 11 Jun 2019 13:07:54 GMT
+Content-Type: text/plain; charset=utf-8
+Content-Length: 14
+Connection: keep-alive
+
+Hello Docker!!%
+```
+
+このように、Secretリソースにより、平文で大事なデータを管理しなくてよくなる。
+とはいえ、これを使ったから完璧というわけではない。
+仕組みを理解している人なら簡単にわかる。
+
+今日はここまで。
