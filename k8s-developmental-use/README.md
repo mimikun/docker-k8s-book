@@ -189,6 +189,57 @@ ServiceAccountはアプリケーション経由でk8s操作を制御できるの
 以後、ローカルk8s環境を利用し、実際にRBAC関連リソースを作成し、認証ユーザーで認証を行った上でのk8s操作を行う。
 次に、ServiceAccountを利用したPodからのk8s API利用を行う。
 
+2019年6月13日
+
 ### 7.2.1 RBACを利用して権限制御を実現する
+
+RBACでの権限制御は
+
+- k8s APIのどの操作が可能であるかを定義したロール
+- 認証ユーザー・グループ・ServiceAccountとロールの紐づけ
+
+の2つの要素で成立する。
+
+RBACでの権限制御を実現するために、以下のようなk8sリソースが提供されている。
+
+- Role
+  - k8s APIへの操作許可のルールを定義し、指定のnamespace内でのみ有効
+- RoleBinding
+  - 認証ユーザー・グループ・ServiceAccountとRoleの紐づけを定義する
+- ClusterRole
+  - k8s APIへの操作許可のルールを定義し、クラスタ全体で有効
+- ClusterRoleBinding
+  - 認証ユーザー・グループ・ServiceAccountとClusterRoleの紐づけを定義する
+
+xxxRoleとあるのがロール、xxxBindingとあるのが紐づけを担う。
+
+ここから先はローカルk8s環境ではできないので、パブリッククラウドを使う。
+
+#### GKE上に検証環境を作る
+
+環境構築
+
+```sh
+# プロジェクトのセット
+gcloud config set project gihyo-kube-xxxxxx
+# クラスタの作成
+gcloud container clusters create gihyo-k8s-chap72 --cluster-version=1.12.7-gke.10 \
+    --machine-type=n1-standard-1 \
+    --num-nodes=3 \
+    --disk-size=10
+# kubectlに認証情報をセットする
+gcloud container clusters get-credentials gihyo-k8s-chap72
+```
+
+$ touch try-rbac/create-cluster-role.yml
+
+(詳しくはtry-rbac/create-cluster-role.ymlを見て)
+
+このClusterRoleではPod情報を参照するための権限ロールを定義してる。
+
+$ kubectl apply -f try-rbac/create-cluster-role.yml
+
+確認方法:
+$ kubectl get clusterrole pod-reader
 
 今日はここまで
